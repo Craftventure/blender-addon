@@ -38,12 +38,12 @@ def do_export(context, props, filepath):
     return True
 
 bl_info = {
-    'name': 'Craftventure Exporter',
+    'name': 'Craftventure Pose Exporter',
     'author': 'Joeywp',
     'version': (1, 0, 0),
-    'blender': (2, 80, 0),
-    'location': 'File > Export > Craftventure.kotlin (.kt)',
-    'description': 'Export Craftventure.kotlin scenes (.kt)',
+    'blender': (2, 80, 3),
+    'location': 'File > Export > Craftventure pose.kotlin (.kt)',
+    'description': 'Export Craftventure pose.kotlin scenes (.kt)',
     'category': 'Import-Export'}
 
 # if "bpy" in locals():
@@ -67,7 +67,7 @@ import bpy
 
 @orientation_helper(axis_forward='-Z', axis_up='Y')
 class ExportKT(bpy.types.Operator, ExportHelper):
-    """Save a Craftventure Kotlin File"""
+    """Save a Craftventure Pose Kotlin File"""
 
     bl_idname = "export_scene.kt"
     bl_label = 'Export KT'
@@ -77,7 +77,7 @@ class ExportKT(bpy.types.Operator, ExportHelper):
 
     def execute(self, context):
         start_time = time.time()
-        print('\n_____START_____')
+        print('\n_____START POSE_____')
         props = self.properties
         filepath = self.filepath
         filepath = bpy.path.ensure_ext(filepath, self.filename_ext)
@@ -92,7 +92,7 @@ class ExportKT(bpy.types.Operator, ExportHelper):
 
 
 def menu_func_export(self, context):
-    self.layout.operator(ExportKT.bl_idname, text="Kotlin (.kt)")
+    self.layout.operator(ExportKT.bl_idname, text="Kotlin Pose (.kt)")
 
 
 classes = (
@@ -109,31 +109,31 @@ def do_export(context, props, filepath):
 
     DEG2RAD = 57.29577951
 
-    for current_obj in context.selected_objects:
-        if current_obj.type == 'CURVE':
-            writeString(file,
-                        "SplinedTrackSegment " + current_obj.data.name + " = SplinedTrackSegment(trackedRide)\n")
-
-            xOffset = current_obj.matrix_world.to_translation().x
-            yOffset = current_obj.matrix_world.to_translation().y
-            zOffset = current_obj.matrix_world.to_translation().z
-
-            writeString(file, current_obj.data.name + ".add(offset")
-
-            for spline in current_obj.data.splines:
-                for bezier_point in spline.bezier_points:
-                    writeString(file, ",\n  SplineNode(SplineHandle(%f, %f, %f),\n" % (
-                        bezier_point.handle_left[0] + xOffset, bezier_point.handle_left[2] + zOffset,
-                        -bezier_point.handle_left[1] + yOffset))
-                    writeString(file, "     SplineHandle(%f, %f, %f),\n" % (
-                        bezier_point.co[0] + xOffset, bezier_point.co[2] + zOffset, -bezier_point.co[1] + yOffset))
-                    writeString(file, "     SplineHandle(%f, %f, %f), %f)" % (
-                        bezier_point.handle_right[0] + xOffset, bezier_point.handle_right[2] + zOffset,
-                        -bezier_point.handle_right[1] + yOffset, -(bezier_point.tilt * DEG2RAD)))
-
-            writeString(file, ")\n")
-
-            writeString(file, "\n")
+    # for current_obj in context.selected_objects:
+        # if current_obj.type == 'CURVE':
+        #     writeString(file,
+        #                 "SplinedTrackSegment " + current_obj.data.name + " = SplinedTrackSegment(trackedRide)\n")
+        #
+        #     xOffset = current_obj.matrix_world.to_translation().x
+        #     yOffset = current_obj.matrix_world.to_translation().y
+        #     zOffset = current_obj.matrix_world.to_translation().z
+        #
+        #     writeString(file, current_obj.data.name + ".add(offset")
+        #
+        #     for spline in current_obj.data.splines:
+        #         for bezier_point in spline.bezier_points:
+        #             writeString(file, ",\n  SplineNode(SplineHandle(%f, %f, %f),\n" % (
+        #                 bezier_point.handle_left[0] + xOffset, bezier_point.handle_left[2] + zOffset,
+        #                 -bezier_point.handle_left[1] + yOffset))
+        #             writeString(file, "     SplineHandle(%f, %f, %f),\n" % (
+        #                 bezier_point.co[0] + xOffset, bezier_point.co[2] + zOffset, -bezier_point.co[1] + yOffset))
+        #             writeString(file, "     SplineHandle(%f, %f, %f), %f)" % (
+        #                 bezier_point.handle_right[0] + xOffset, bezier_point.handle_right[2] + zOffset,
+        #                 -bezier_point.handle_right[1] + yOffset, -(bezier_point.tilt * DEG2RAD)))
+        #
+        #     writeString(file, ")\n")
+        #
+        #     writeString(file, "\n")
 
     file.flush()
     file.close()
