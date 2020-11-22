@@ -3,8 +3,8 @@ bl_info = {
     'author': 'Joeywp',
     'version': (1, 0, 0),
     'blender': (2, 90, 1),
-    'location': 'File > Export > Craftventure.kotlin (.kt)',
-    'description': 'Export Craftventure.kotlin scenes (.kt)',
+    'location': 'File > Export > Craftventure.json (.json)',
+    'description': 'Export Craftventure JSON (.json)',
     'category': 'Import-Export'}
 
 # if "bpy" in locals():
@@ -27,13 +27,13 @@ from bpy_extras.io_utils import (
 
 @orientation_helper(axis_forward='-Z', axis_up='Y')
 class ExportKT(bpy.types.Operator, ExportHelper):
-    """Save a Craftventure Kotlin File"""
+    """Save a Craftventure Json File"""
 
-    bl_idname = "export_scene.kt"
-    bl_label = 'Export KT'
+    bl_idname = "export_scene.json"
+    bl_label = 'Export JSON'
     bl_options = {'PRESET'}
 
-    filename_ext = ".kt"
+    filename_ext = ".json"
 
     def execute(self, context):
         start_time = time.time()
@@ -52,11 +52,35 @@ class ExportKT(bpy.types.Operator, ExportHelper):
 
 
 def menu_func_export(self, context):
-    self.layout.operator(ExportKT.bl_idname, text="Kotlin (.kt)")
+    self.layout.operator(ExportKT.bl_idname, text="Craftventure (.json)")
+
+
+class OBJECT_PT_craftventure(bpy.types.Panel):
+    bl_idname = "DATA_PT_craftventure"
+    bl_label = 'Craftventure Panel'
+    bl_space_type = "PROPERTIES"
+    bl_region_type = "WINDOW"
+    bl_context = "object"
+
+    @classmethod
+    def poll(cls, context):
+        return context.object.type == 'CURVE'
+
+    def draw(self, context):
+        ob = context.object
+        print(ob.type)
+        if ob.type == 'CURVE':
+            layout = self.layout
+            # row = layout.row()
+            # row.label(text=str("Tracked ride spline type"))
+            row = layout.row()
+            # row.label(text="Segment type")
+            row.prop(data=ob.data, property='cv_tracked_ride_spline_type')
 
 
 classes = (
     ExportKT,
+    OBJECT_PT_craftventure,
 )
 
 
@@ -81,6 +105,8 @@ def do_export(context, props, filepath):
     #     if current_obj.type == 'CURVE':
     #         # current_obj["custom_tracked_ride_spline_type"] = "SplinedTrackSegment"
     #         print(current_obj.data.custom_tracked_ride_spline_type)
+    #
+    #         current_obj.data.custom_tracked_ride_spline_type = "StationSegment"
     #
     #         # current_obj.trackedRideSplineType = "SplinedTrackSegment"
     #         writeString(file, "val " + current_obj.data.name + " = SplinedTrackSegment(trackedRide)\n")
@@ -123,17 +149,6 @@ def do_export(context, props, filepath):
         if current_obj.type == 'MESH':
             if (current_obj.name.startswith("node")):
                 export.setdefault("nodes", [])
-                # writeString(file,
-                #             "val %s = navigation.createNode(where = Vector(%f, %f, %f), dimensions = Vector(%f, %f, %f), id = \"%s\")\n" % (
-                #                 remove_prefix(current_obj.name, "node_"),
-                #                 current_obj.location.x,
-                #                 current_obj.location.z,
-                #                 -current_obj.location.y,
-                #                 current_obj.dimensions.x,
-                #                 current_obj.dimensions.z,
-                #                 current_obj.dimensions.y,
-                #                 remove_prefix(current_obj.name, "node_"),
-                #             ))
 
                 export["nodes"].append({
                     "id": remove_prefix(current_obj.name, "node_"),
@@ -151,15 +166,15 @@ def do_export(context, props, filepath):
 
     for current_obj in context.selected_objects:
         if current_obj.type == 'CURVE':
+            if current_obj.name.startswith("BezierCurve") and not current_obj.data.name.startswith("BezierCurve"):
+                current_obj.name = current_obj.data.name
+
             export.setdefault("parts", [])
             name = current_obj.name.replace(".", "_")
-            # writeString(file, "val " + name + " = SplinedPathPart(\"%s\")\n" % name)
 
             xOffset = current_obj.matrix_world.to_translation().x
             yOffset = current_obj.matrix_world.to_translation().y
             zOffset = current_obj.matrix_world.to_translation().z
-
-            # writeString(file, name + ".add(")
 
             part = {
                 "type": "bezier",
@@ -169,15 +184,6 @@ def do_export(context, props, filepath):
 
             for spline in current_obj.data.splines:
                 for bezier_point in spline.bezier_points:
-                    # writeString(file, ",\n  SplineNode(SplineHandle(%f, %f, %f),\n" % (
-                    #     bezier_point.handle_left[0] + xOffset, bezier_point.handle_left[2] + zOffset,
-                    #     -bezier_point.handle_left[1] + yOffset))
-                    # writeString(file, "     SplineHandle(%f, %f, %f),\n" % (
-                    #     bezier_point.co[0] + xOffset, bezier_point.co[2] + zOffset, -bezier_point.co[1] + yOffset))
-                    # writeString(file, "     SplineHandle(%f, %f, %f), %f)" % (
-                    #     bezier_point.handle_right[0] + xOffset, bezier_point.handle_right[2] + zOffset,
-                    #     -bezier_point.handle_right[1] + yOffset, -(bezier_point.tilt * DEG2RAD)))
-
                     part["nodes"].append({
                         "in": {
                             "x": bezier_point.handle_left[0] + xOffset,
@@ -199,9 +205,6 @@ def do_export(context, props, filepath):
 
             export["parts"].append(part)
 
-            # writeString(file, ")\n")
-            # writeString(file, "navigation.addPathPart(%s)\n\n" % name)
-
     writeString(file, json.dumps(export, indent=2))
 
     file.flush()
@@ -215,11 +218,18 @@ def register():
 
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
 
-    bpy.types.Material.custom_float = bpy.props.FloatProperty(name="Test Property 1")
-    bpy.types.Curve.custom_float = bpy.props.FloatProperty(name="Test Property 2")
+    bpy.types.Scene.cv_scene_type = bpy.props.EnumProperty(
+        name="Scene Type",
+        default="Tracked",
+        items=(
+            ("Tracked", "Tracked", "Tracked"),
+            ("Trackless", "Trackless", "Trackless")
+        ),
+        options=set()
+    )
 
-    bpy.types.Curve.custom_tracked_ride_spline_type = bpy.props.EnumProperty(
-        name="Tracked Ride Spline Type",
+    bpy.types.Curve.cv_tracked_ride_spline_type = bpy.props.EnumProperty(
+        name="Segment Type",
         default="SplinedTrackSegment",
         items=(
             ("StationSegment", "StationSegment", "StationSegment"),
@@ -234,6 +244,8 @@ def unregister():
 
     for cls in classes:
         bpy.utils.unregister_class(cls)
+
+    # del bpy.types.Scene.cv_tracked_ride_spline_type
 
 
 if __name__ == "__main__":
