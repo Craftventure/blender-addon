@@ -29,6 +29,16 @@ from bpy_extras.io_utils import (
 class ExportKT(bpy.types.Operator, ExportHelper):
     """Save a Craftventure Json File"""
 
+    export_type = bpy.props.EnumProperty(
+        name="Export type",
+        default="JSON",
+        items=(
+            ("JSON", "JSON", "JSON"),
+            ("Kotlin", "Kotlin", "Kotlin")
+        ),
+        options=set()
+    )
+
     bl_idname = "export_scene.json"
     bl_label = 'Export JSON'
     bl_options = {'PRESET'}
@@ -42,7 +52,10 @@ class ExportKT(bpy.types.Operator, ExportHelper):
         filepath = self.filepath
         filepath = bpy.path.ensure_ext(filepath, self.filename_ext)
 
-        exported = do_export(context, props, filepath)
+        if self.export_type == "JSON":
+            exported = do_export_json(context, props, filepath)
+        else:
+            exported = do_export_kotlin(context, props, filepath)
 
         if exported:
             print('finished export in %s seconds' % ((time.time() - start_time)))
@@ -92,7 +105,48 @@ def writeString(file, string):
     file.write(bytes(string, 'UTF-8'))
 
 
-def do_export(context, props, filepath):
+def do_export_kotlin(context, props, filepath):
+    file = open(filepath, "wb")
+
+    DEG2RAD = 57.29577951
+
+    for current_obj in context.selected_objects:
+        if current_obj.type == 'CURVE':
+            # current_obj["custom_tracked_ride_spline_type"] = "SplinedTrackSegment"
+            # print(current_obj.data.custom_tracked_ride_spline_type)
+
+            # current_obj.data.custom_tracked_ride_spline_type = "StationSegment"
+
+            # current_obj.trackedRideSplineType = "SplinedTrackSegment"
+            writeString(file, "val " + current_obj.data.name + " = SplinedTrackSegment(trackedRide)\n")
+
+            xOffset = current_obj.matrix_world.to_translation().x
+            yOffset = current_obj.matrix_world.to_translation().y
+            zOffset = current_obj.matrix_world.to_translation().z
+
+            writeString(file, current_obj.data.name + ".add(offset")
+
+            for spline in current_obj.data.splines:
+                for bezier_point in spline.bezier_points:
+                    writeString(file, ",\n  SplineNode(SplineHandle(%f, %f, %f),\n" % (
+                        bezier_point.handle_left[0] + xOffset, bezier_point.handle_left[2] + zOffset,
+                        -bezier_point.handle_left[1] + yOffset))
+                    writeString(file, "     SplineHandle(%f, %f, %f),\n" % (
+                        bezier_point.co[0] + xOffset, bezier_point.co[2] + zOffset, -bezier_point.co[1] + yOffset))
+                    writeString(file, "     SplineHandle(%f, %f, %f), %f)" % (
+                        bezier_point.handle_right[0] + xOffset, bezier_point.handle_right[2] + zOffset,
+                        -bezier_point.handle_right[1] + yOffset, -(bezier_point.tilt * DEG2RAD)))
+            writeString(file, ")\n")
+            writeString(file, "\n")
+
+    writeString(file, "\n")
+
+    file.flush()
+    file.close()
+    return True
+
+
+def do_export_json(context, props, filepath):
     file = open(filepath, "wb")
 
     DEG2RAD = 57.29577951
