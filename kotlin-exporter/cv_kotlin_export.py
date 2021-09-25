@@ -2,7 +2,7 @@ bl_info = {
     'name': 'Craftventure Exporter',
     'author': 'Joeywp',
     'version': (1, 0, 0),
-    'blender': (2, 90, 1),
+    'blender': (2, 93, 4),
     'location': 'File > Export > Craftventure.json (.json)',
     'description': 'Export Craftventure JSON (.json)',
     'category': 'Import-Export'}
@@ -29,7 +29,7 @@ from bpy_extras.io_utils import (
 class ExportKT(bpy.types.Operator, ExportHelper):
     """Save a Craftventure Json File"""
 
-    export_type = bpy.props.EnumProperty(
+    export_type: bpy.props.EnumProperty(
         name="Export type",
         default="JSON",
         items=(
