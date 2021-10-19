@@ -39,6 +39,14 @@ class ExportKT(bpy.types.Operator, ExportHelper):
         options=set()
     )
 
+    max_dimensions: bpy.props.FloatProperty(
+        name="Max dimensions for nodes",
+        default=0.1,
+        min=0.0,
+        max=1000.0,
+        options=set()
+    )
+
     bl_idname = "export_scene.json"
     bl_label = 'Export JSON'
     bl_options = {'PRESET'}
@@ -53,7 +61,7 @@ class ExportKT(bpy.types.Operator, ExportHelper):
         filepath = bpy.path.ensure_ext(filepath, self.filename_ext)
 
         if self.export_type == "JSON":
-            exported = do_export_json(context, props, filepath)
+            exported = do_export_json(context, props, filepath, self.max_dimensions)
         else:
             exported = do_export_kotlin(context, props, filepath)
 
@@ -129,13 +137,18 @@ def do_export_kotlin(context, props, filepath):
             for spline in current_obj.data.splines:
                 for bezier_point in spline.bezier_points:
                     writeString(file, ",\n  SplineNode(SplineHandle(%f, %f, %f),\n" % (
-                        bezier_point.handle_left[0] + xOffset, bezier_point.handle_left[2] + zOffset,
+                        bezier_point.handle_left[0] + xOffset,
+                        bezier_point.handle_left[2] + zOffset,
                         -bezier_point.handle_left[1] + yOffset))
                     writeString(file, "     SplineHandle(%f, %f, %f),\n" % (
-                        bezier_point.co[0] + xOffset, bezier_point.co[2] + zOffset, -bezier_point.co[1] + yOffset))
+                        bezier_point.co[0] + xOffset,
+                        bezier_point.co[2] + zOffset,
+                        -bezier_point.co[1] + yOffset))
                     writeString(file, "     SplineHandle(%f, %f, %f), %f)" % (
-                        bezier_point.handle_right[0] + xOffset, bezier_point.handle_right[2] + zOffset,
-                        -bezier_point.handle_right[1] + yOffset, -(bezier_point.tilt * DEG2RAD)))
+                        bezier_point.handle_right[0] + xOffset,
+                        bezier_point.handle_right[2] + zOffset,
+                        -bezier_point.handle_right[1] + yOffset,
+                        -(bezier_point.tilt * DEG2RAD)))
             writeString(file, ")\n")
             writeString(file, "\n")
 
@@ -146,7 +159,7 @@ def do_export_kotlin(context, props, filepath):
     return True
 
 
-def do_export_json(context, props, filepath):
+def do_export_json(context, props, filepath, max_dimensions):
     file = open(filepath, "wb")
 
     DEG2RAD = 57.29577951
@@ -212,9 +225,9 @@ def do_export_json(context, props, filepath):
                         "z": -current_obj.location.y,
                     },
                     "dimensions": {
-                        "x": current_obj.dimensions.x,
-                        "y": current_obj.dimensions.z,
-                        "z": current_obj.dimensions.y,
+                        "x": round(min(max_dimensions, current_obj.dimensions.x), 3),
+                        "y": round(min(max_dimensions, current_obj.dimensions.z), 3),
+                        "z": round(min(max_dimensions, current_obj.dimensions.y), 3),
                     },
                 })
 
